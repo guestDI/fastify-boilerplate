@@ -10,7 +10,8 @@
   "dependencies": {
     "fastify": "^4.0.0",
     "fastify-plugin": "^4.0.0",
-    "pino": "^7.0.0"
+    "pino": "^7.0.0",
+    "tap": "^21.0.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.0"

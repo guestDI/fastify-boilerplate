@@ -22,7 +22,7 @@ Replace <project-name> with the desired name for your new project. This will:
 
 This command will create a new folder named `<project-name>` with the following structure:
 ```
-my-fastify-app/
+<project-name>/
 ├── src/
 │   ├── plugins/
 │   ├── routes/
@@ -33,6 +33,7 @@ my-fastify-app/
 │   ├── config/
 │   ├── app.js
 │   └── index.js
+├── tests/
 ├── .env
 ├── .gitignore
 ├── package.json
@@ -41,14 +42,15 @@ my-fastify-app/
 
 ## Project Structure
 - **src/**: Contains all application source code, structured by plugins, routes, controllers, services, and models.
-- **app.js**: Entry file for configuring Fastify and registering plugins and routes.
-- **config/**: Stores configuration files like database configuration.
-- **plugins/**: Custom Fastify plugins (e.g., authentication, database).
-- **routes/**: Route definitions and schema validations.
-- **controllers/**: Controllers for handling route logic.
-- **services/**: Service layer for business logic.
-- **models/**: Data models (if using an ORM).
-- **utils/**: Utility functions (e.g., logger, error handler).
+  - **app.js**: Entry file for configuring Fastify and registering plugins and routes.
+  - **config/**: Stores configuration files like database configuration.
+  - **plugins/**: Custom Fastify plugins (e.g., authentication, database).
+  - **routes/**: Route definitions and schema validations.
+  - **controllers/**: Controllers for handling route logic.
+  - **services/**: Service layer for business logic.
+  - **models/**: Data models (if using an ORM).
+  - **utils/**: Utility functions (e.g., logger, error handler).
+- **tests/**: Contains all application tests.
 
 ## License
 This project is licensed under the MIT License.

@@ -1,6 +1,6 @@
 # Fastify App
 
-This is a boilerplate Fastify application created with `fastify-cli`.
+This is a boilerplate Fastify application created with `fastify-boilerplate-cli`.
 
 ## Getting Started
 
