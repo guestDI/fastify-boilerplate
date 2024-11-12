@@ -12,7 +12,13 @@ Node.js (version 12 or higher)
 ## Usage
 To create a new Fastify project:
 
-`fastify-boilerplate-cli create <project-name>`
+`
+  npm install -g fastify-boilerplate-cli
+`
+
+`
+  fastify-boilerplate-cli create <project-name>
+`
 
 Replace <project-name> with the desired name for your new project. This will:
 
