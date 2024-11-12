@@ -1,5 +1,5 @@
 async function aboutRoutes(fastify) {
-    const { getUsers, createUser } = require('../../controllers/userController');
+    const { getAbout } = require('../../controllers/aboutController');
     fastify.get('/about', getAbout);
 }
 
