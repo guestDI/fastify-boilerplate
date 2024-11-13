@@ -29,7 +29,6 @@ jobs:
 #          package-name: fastify-boilerplate-cli
 
   publish-npm:
-    needs: release-please
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
