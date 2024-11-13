@@ -4,6 +4,7 @@ const { Command } = require('commander');
 const fs = require('fs-extra');
 const path = require('path');
 const ora = require('ora');
+const { exec } = require('child_process');
 
 const program = new Command();
 const TEMPLATE_DIR = path.join(__dirname, 'templates');
@@ -97,6 +98,7 @@ async function createBoilerplate(projectDir, projectName, spinner) {
     await setupTesting(projectDir, spinner);
 
     await setupLinting(projectDir, spinner);
+    await initializeGitRepo(projectDir, spinner);
 }
 
 async function addRouteToAppJs(routeName) {
@@ -131,6 +133,21 @@ async function addRouteToAppJs(routeName) {
     } catch (error) {
         console.error('Error adding route to app.js:', error);
     }
+}
+
+async function initializeGitRepo(projectDir, spinner) {
+    return new Promise((resolve, reject) => {
+        exec('git init', { cwd: projectDir }, (error, stdout, stderr) => {
+            if (error) {
+                spinner.fail('Failed to initialize Git repository');
+                console.error('Error initializing Git:', stderr);
+                reject(error);
+            } else {
+                spinner.succeed('Git repository initialized successfully');
+                resolve();
+            }
+        });
+    });
 }
 
 async function setupTesting(baseDir, spinner) {

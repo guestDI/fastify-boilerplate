@@ -7,28 +7,29 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  build:
+  release-please:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Release Please
+        uses: google-github-actions/release-please-action@v4
         with:
-          node-version: 20
-      - run: npm install
-
-#  release-please:
-#    needs: build
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#      - name: Release Please
-#        uses: google-github-actions/release-please-action@v4
-#        with:
-#          release-type: node
-#          package-name: fastify-boilerplate-cli
+          release-type: node
+          package-name: fastify-boilerplate-cli
+          bump-minor-pre-major: true      # Optionally adjust to allow minor bumps on pre-major versions
+          changelog-types: release        # Customize changelog format if needed
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fork: false                     # Ensures PRs are in the same repo
+          autorelease: true
 
   publish-npm:
+    needs: release-please               # Ensures this job runs after release-please
+    if: github.event_name == 'release'  # Runs only on releases
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

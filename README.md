@@ -16,6 +16,7 @@ To create a new Fastify project:
   npm install -g fastify-boilerplate-cli
 `
 
+### Command below will create initial project with pre-defined structure
 `
   fastify-boilerplate-cli create <project-name>
 `
@@ -57,6 +58,13 @@ This command will create a new folder named `<project-name>` with the following 
   - **models/**: Data models (if using an ORM).
   - **utils/**: Utility functions (e.g., logger, error handler).
 - **tests/**: Contains all application tests.
+
+### Generate `route`
+`
+fastify-boilerplate-cli route <route-name>
+`
+It will create `<route-name>` folder in routes, services and controllers. Also it will automatically register this route 
+in app.js.
 
 ## License
 This project is licensed under the MIT License.
