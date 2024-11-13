@@ -29,7 +29,6 @@ jobs:
 
   publish-npm:
     needs: release-please               # Ensures this job runs after release-please
-    if: github.event_name == 'release'  # Runs only on releases
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
