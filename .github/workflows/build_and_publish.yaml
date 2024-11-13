@@ -24,39 +24,42 @@ jobs:
         with:
           release-type: node
           package-name: fastify-boilerplate-cli
-          bump-minor-pre-major: true      # Optionally adjust to allow minor bumps on pre-major versions
-          changelog-types: release        # Customize changelog format if needed
+          bump-minor-pre-major: true
+          changelog-types: release
           token: ${{ secrets.GITHUB_TOKEN }}
-          fork: false                     # Ensures PRs are in the same repo
+          fork: false
           autorelease: true
 
   enable-auto-merge:
     needs: release-please
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request' || github.event_name == 'push' 
+    if: github.event_name == 'pull_request' || github.event_name == 'push' 
     steps:
       - name: Enable Auto-Merge for GitHub Actions Bot PR
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}   # Make sure to set this secret in GitHub Settings
+          GH_PAT: ${{ secrets.GH_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          # Get pull request details
           pr_data=$(curl -s -H "Authorization: token $GH_PAT" \
               -H "Accept: application/vnd.github.v3+json" \
               https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER)
 
+          echo "Pull Request Data: $pr_data"  # For debugging
           
-          # Enable auto-merge
-            curl -X PUT -H "Authorization: token $GH_PAT" \
+          pr_author=$(echo "$pr_data" | jq -r '.user.login')
+          if [ "$pr_author" = "github-actions[bot]" ]; then
+            response=$(curl -X PUT -H "Authorization: token $GH_PAT" \
                 -H "Accept: application/vnd.github.v3+json" \
                 https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge \
-                -d '{"merge_method": "squash"}'
-          
+                -d '{"merge_method": "squash"}')
+            echo "Merge Response: $response"  # For debugging
+          else
+            echo "PR is not from GitHub Actions bot, skipping auto-merge."
           fi
 
   publish-npm:
-    needs: enable-auto-merge            # Ensures this job runs after enable-auto-merge
+    needs: enable-auto-merge
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
