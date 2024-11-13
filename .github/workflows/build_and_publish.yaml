@@ -33,7 +33,7 @@ jobs:
   enable-auto-merge:
     needs: release-please
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request' || github.event_name == 'push' 
     steps:
       - name: Enable Auto-Merge for GitHub Actions Bot PR
         env:
@@ -46,16 +46,13 @@ jobs:
               -H "Accept: application/vnd.github.v3+json" \
               https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER)
 
-          # Check if the PR author is the GitHub Actions bot
-          pr_author=$(echo "$pr_data" | jq -r '.user.login')
-          if [ "$pr_author" = "github-actions[bot]" ]; then
-            # Enable auto-merge
+          
+          # Enable auto-merge
             curl -X PUT -H "Authorization: token $GH_PAT" \
                 -H "Accept: application/vnd.github.v3+json" \
                 https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge \
                 -d '{"merge_method": "squash"}'
-          else
-            echo "PR is not from GitHub Actions bot, skipping auto-merge."
+          
           fi
 
   publish-npm:
