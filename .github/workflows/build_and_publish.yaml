@@ -31,6 +31,7 @@ jobs:
           autorelease: true
 
   enable-auto-merge:
+    needs: release-please
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
@@ -58,8 +59,7 @@ jobs:
           fi
 
   publish-npm:
-    needs: release-please               # Ensures this job runs after release-please
-    if: github.event_name == 'release'  # Runs only on releases
+    needs: enable-auto-merge            # Ensures this job runs after enable-auto-merge
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
