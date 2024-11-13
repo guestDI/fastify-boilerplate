@@ -33,19 +33,32 @@ jobs:
   enable-auto-merge:
     needs: release-please
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'github-actions[bot]' }}  # Run only for GitHub Actions bot PRs
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
-      - name: Approve the PR
-        run: gh pr review --approve "$PR_URL"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Enable auto-merge for GitHub Actions Bot PRs
-        run: gh pr merge --auto --rebase "$PR_URL"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Enable Auto-Merge for GitHub Actions Bot PR
+      env:
+        GH_PAT: ${{ secrets.GH_PAT }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_URL: ${{ github.event.pull_request.url }}
+      run: |
+        # Fetch the pull request details using the event-supplied PR number
+        pr_data=$(curl -s -H "Authorization: token $GH_PAT" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/${{ github.event.number }})
+
+        echo "Pull Request Data: $pr_data"  # Logs the PR data for debugging
+
+        pr_author=$(echo "$pr_data" | jq -r '.user.login')
+        if [ "$pr_author" = "github-actions[bot]" ]; then
+          # Enable auto-merge
+          response=$(curl -X PUT -H "Authorization: token $GH_PAT" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/${{ github.event.number }}/merge \
+              -d '{"merge_method": "squash"}')
+          echo "Merge Response: $response"  # Logs the response from the merge request
+        else
+          echo "PR is not from GitHub Actions bot, skipping auto-merge."
+        fi
 
   publish-npm:
     needs: enable-auto-merge
