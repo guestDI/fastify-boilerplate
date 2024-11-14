@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/guestDI/fastify-boilerplate/compare/v1.0.0...v1.1.0) (2024-11-14)
+
+
+### Features
+
+* Add optional dockerfile generation ([b0ecedb](https://github.com/guestDI/fastify-boilerplate/commit/b0ecedb28c69ea641f10cd682789718f17f1bcf1))
+* Add optional dockerfile generation ([5585ff8](https://github.com/guestDI/fastify-boilerplate/commit/5585ff8a3978f3e780e71965c85db46120750183))
+
 ## 1.0.0 (2024-11-13)
 
 
