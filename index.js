@@ -5,13 +5,14 @@ const fs = require('fs-extra');
 const path = require('path');
 const ora = require('ora');
 const { exec } = require('child_process');
+const inquirer = require('inquirer').default;
 
 const program = new Command();
 const TEMPLATE_DIR = path.join(__dirname, 'templates');
 const APP_FILE_PATH = path.join(process.cwd(), 'src', 'app.js');
 
 program
-    .version('0.0.2')
+    .version('1.0.0')
     .description('CLI to create Fastify boilerplate structure');
 
 program
@@ -99,6 +100,7 @@ async function createBoilerplate(projectDir, projectName, spinner) {
 
     await setupLinting(projectDir, spinner);
     await initializeGitRepo(projectDir, spinner);
+    await promptForDockerfile(projectDir, spinner);
 }
 
 async function addRouteToAppJs(routeName) {
@@ -148,6 +150,47 @@ async function initializeGitRepo(projectDir, spinner) {
             }
         });
     });
+}
+
+async function promptForDockerfile(projectDir, spinner) {
+    const { createDockerfile } = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'createDockerfile',
+            message: 'Would you like to add a Dockerfile to your project? (default \'No\')',
+            default: false,
+        },
+    ]);
+
+    if (createDockerfile) {
+        const dockerfileContent = `
+# Use the official Node.js image as the base image
+FROM node:20
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy package.json and package-lock.json to the working directory
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application code to the working directory
+COPY . .
+
+# Expose the port Fastify will use
+EXPOSE 3000
+
+# Command to run the Fastify server
+CMD ["npm", "start"]
+        `;
+
+        await fs.writeFile(path.join(projectDir, 'Dockerfile'), dockerfileContent.trim(), 'utf-8');
+        spinner.succeed('Dockerfile was created successfully');
+    } else {
+        spinner.info('Dockerfile generation was skipped');
+    }
 }
 
 async function setupTesting(baseDir, spinner) {
