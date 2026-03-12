@@ -1,9 +1,10 @@
 {
   "name": "fastify-boilerplate-cli",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest",
+    "build": "node --check index.js src/commands/create.js src/commands/route.js src/generators/boilerplate.js src/generators/route.js src/utils/git.js src/prompts/createPrompts.js"
   },
   "bin": {
     "fastify-boilerplate-cli": "./index.js"
@@ -18,5 +19,8 @@
     "fs-extra": "^11.2.0",
     "inquirer": "^12.1.0",
     "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0"
   }
 }

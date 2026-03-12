@@ -3,8 +3,6 @@
 const path = require('path');
 const fs = require('fs-extra');
 
-const APP_FILE_PATH = path.join(process.cwd(), 'src', 'app.js');
-
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
@@ -67,9 +65,12 @@ module.exports = ${routeName}Routes;
 
   const testContent = `'use strict';
 
-const app = require('../../src/app');
+const buildApp = require('../../src/app');
+
+let app;
 
 beforeAll(async () => {
+  app = buildApp({ logger: false });
   await app.ready();
 });
 
@@ -99,7 +100,7 @@ describe('GET /${routeName}', () => {
 async function addRouteToAppJs(routeName, baseDir = process.cwd()) {
   const appFilePath = path.join(baseDir, 'src', 'app.js');
   const importStatement = `const ${routeName}Route = require('./routes/${routeName}');`;
-  const registerStatement = `app.register(${routeName}Route, { prefix: '/${routeName}' });`;
+  const registerStatement = `    fastify.register(${routeName}Route, { prefix: '/${routeName}' });`;
 
   let content = await fs.readFile(appFilePath, 'utf-8');
 
@@ -110,15 +111,26 @@ async function addRouteToAppJs(routeName, baseDir = process.cwd()) {
 
   const lines = content.split('\n');
 
-  // Insert import after the first line
-  lines.splice(1, 0, importStatement);
+  // Insert import just before `function buildApp`
+  const buildAppIndex = lines.findIndex((line) => line.startsWith('function buildApp'));
+  if (buildAppIndex !== -1) {
+    lines.splice(buildAppIndex, 0, importStatement, '');
+  } else {
+    lines.splice(1, 0, importStatement);
+  }
 
-  // Insert registration after the //Routes registration comment
+  // Insert registration after `//Routes registration` comment
   const registerIndex = lines.findIndex((line) => line.includes('//Routes registration'));
   if (registerIndex !== -1) {
     lines.splice(registerIndex + 1, 0, registerStatement);
   } else {
-    lines.push(registerStatement);
+    // Fallback: insert before `return fastify`
+    const returnIndex = lines.findIndex((line) => line.trim() === 'return fastify;');
+    if (returnIndex !== -1) {
+      lines.splice(returnIndex, 0, registerStatement);
+    } else {
+      lines.push(registerStatement);
+    }
   }
 
   await fs.writeFile(appFilePath, lines.join('\n'), 'utf-8');

@@ -1,4 +1,6 @@
-// Пример модели пользователя, если используется ORM, например Sequelize или Mongoose
+'use strict';
+
+// Example user model schema
 module.exports = {
     name: 'User',
     schema: {
