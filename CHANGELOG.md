@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.1](https://github.com/guestDI/fastify-boilerplate/compare/v1.1.0...v1.1.1) (2026-03-12)
+## [1.1.2](https://github.com/guestDI/fastify-boilerplate/compare/v1.1.0...v1.1.1) (2026-03-12)
 
 ### Bug Fixes
 
