@@ -1,7 +1,10 @@
-const app = require('./app');
+'use strict';
+
+const buildApp = require('./app');
 const config = require('./config');
 
 const start = async () => {
+    const app = buildApp();
     try {
         await app.listen({ port: config.port, host: '0.0.0.0' });
     } catch (err) {
