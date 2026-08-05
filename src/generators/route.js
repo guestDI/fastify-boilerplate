@@ -2,12 +2,15 @@
 
 const path = require('path');
 const fs = require('fs-extra');
+const { validateRouteName } = require('../utils/validateName');
 
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 async function generateRoute(routeName, baseDir = process.cwd()) {
+  validateRouteName(routeName);
+
   const routeDir = path.join(baseDir, 'src', 'routes', routeName);
   const controllerDir = path.join(baseDir, 'src', 'controllers');
   const modelDir = path.join(baseDir, 'src', 'models');
@@ -87,7 +90,10 @@ describe('GET /${routeName}', () => {
 `;
 
   await Promise.all([
-    fs.writeFile(path.join(controllerDir, `${routeName}.js`), controllerContent),
+    fs.writeFile(
+      path.join(controllerDir, `${routeName}.js`),
+      controllerContent,
+    ),
     fs.writeFile(path.join(modelDir, `${routeName}.js`), modelContent),
     fs.writeFile(path.join(serviceDir, `${routeName}.js`), serviceContent),
     fs.writeFile(path.join(routeDir, 'index.js'), routeContent),
@@ -100,7 +106,7 @@ describe('GET /${routeName}', () => {
 async function addRouteToAppJs(routeName, baseDir = process.cwd()) {
   const appFilePath = path.join(baseDir, 'src', 'app.js');
   const importStatement = `const ${routeName}Route = require('./routes/${routeName}');`;
-  const registerStatement = `    fastify.register(${routeName}Route, { prefix: '/${routeName}' });`;
+  const registerStatement = `  fastify.register(${routeName}Route, { prefix: '/${routeName}' });`;
 
   let content = await fs.readFile(appFilePath, 'utf-8');
 
@@ -112,7 +118,9 @@ async function addRouteToAppJs(routeName, baseDir = process.cwd()) {
   const lines = content.split('\n');
 
   // Insert import just before `function buildApp`
-  const buildAppIndex = lines.findIndex((line) => line.startsWith('function buildApp'));
+  const buildAppIndex = lines.findIndex((line) =>
+    line.startsWith('function buildApp'),
+  );
   if (buildAppIndex !== -1) {
     lines.splice(buildAppIndex, 0, importStatement, '');
   } else {
@@ -120,12 +128,16 @@ async function addRouteToAppJs(routeName, baseDir = process.cwd()) {
   }
 
   // Insert registration after `//Routes registration` comment
-  const registerIndex = lines.findIndex((line) => line.includes('//Routes registration'));
+  const registerIndex = lines.findIndex((line) =>
+    line.includes('//Routes registration'),
+  );
   if (registerIndex !== -1) {
     lines.splice(registerIndex + 1, 0, registerStatement);
   } else {
     // Fallback: insert before `return fastify`
-    const returnIndex = lines.findIndex((line) => line.trim() === 'return fastify;');
+    const returnIndex = lines.findIndex(
+      (line) => line.trim() === 'return fastify;',
+    );
     if (returnIndex !== -1) {
       lines.splice(returnIndex, 0, registerStatement);
     } else {

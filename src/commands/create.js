@@ -5,6 +5,7 @@ const fs = require('fs-extra');
 const ora = require('ora');
 const { promptCreateOptions } = require('../prompts/createPrompts');
 const { createBoilerplate } = require('../generators/boilerplate');
+const { validateProjectName } = require('../utils/validateName');
 
 function registerCreateCommand(program) {
   program
@@ -13,6 +14,8 @@ function registerCreateCommand(program) {
     .action(async (projectName) => {
       const spinner = ora();
       try {
+        validateProjectName(projectName);
+
         const choices = await promptCreateOptions();
 
         spinner.start('Setting up project...');
@@ -21,7 +24,8 @@ function registerCreateCommand(program) {
         await createBoilerplate(projectDir, projectName, choices, spinner);
       } catch (error) {
         spinner.fail('Error creating project');
-        console.error('Error creating project:', error);
+        console.error('Error creating project:', error.message);
+        process.exitCode = 1;
       }
     });
 }

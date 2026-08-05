@@ -34,8 +34,12 @@ async function promptCreateOptions() {
       name: 'plugins',
       message: 'Select optional plugins:',
       choices: [
+        { name: 'Security headers    (@fastify/helmet)', value: 'helmet' },
         { name: 'CORS                (@fastify/cors)', value: 'cors' },
-        { name: 'Rate Limiting       (@fastify/rate-limit)', value: 'ratelimit' },
+        {
+          name: 'Rate Limiting       (@fastify/rate-limit)',
+          value: 'ratelimit',
+        },
         { name: 'Swagger / OpenAPI   (@fastify/swagger)', value: 'swagger' },
         { name: 'Env Validation      (@fastify/env)', value: 'env' },
       ],
