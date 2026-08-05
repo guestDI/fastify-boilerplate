@@ -59,7 +59,7 @@ tests/
 
 ## Environment variables
 
-Copy `.env` and fill in the values before starting:
+`.env` is generated for you and git-ignored. Any auth secret in it was randomly generated at scaffold time — rotate it for production and never commit the file.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -109,7 +109,7 @@ Open `src/plugins/auth.js`. The plugin decorates the Fastify instance with an `a
 fastify.get('/protected', { preHandler: fastify.authenticate }, handler);
 ```
 
-Implement the verification logic inside the plugin (e.g. with `@fastify/jwt`).
+If you picked a strategy at scaffold time the check is already implemented and the plugin refuses to start when its secret is missing. If you picked **None**, `authenticate` is a no-op — any route using it is public until you implement it.
 
 ---
 

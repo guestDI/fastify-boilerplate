@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs-extra');
 const { initializeGitRepo } = require('../utils/git');
@@ -12,31 +13,40 @@ const PLUGINS_TEMPLATE_DIR = path.join(TEMPLATES_DIR, 'plugins');
 
 // All versions below are the minimum that declare Fastify v5 peer dependency support.
 const DB_DEPS = {
-  postgres: { '@fastify/postgres': '^6.0.0' },   // v6 → Fastify v5
-  mysql: { mysql2: '^3.0.0' },                    // native driver, no Fastify peer dep
-  mongodb: { '@fastify/mongodb': '^9.0.0' },      // v9 → Fastify v5 (v8 was v4-only)
-  sqlite: { 'better-sqlite3': '^9.0.0' },         // native driver, no Fastify peer dep
+  postgres: { '@fastify/postgres': '^6.0.0' }, // v6 → Fastify v5
+  mysql: { mysql2: '^3.0.0' }, // native driver, no Fastify peer dep
+  mongodb: { '@fastify/mongodb': '^9.0.0' }, // v9 → Fastify v5 (v8 was v4-only)
+  sqlite: { 'better-sqlite3': '^9.0.0' }, // native driver, no Fastify peer dep
   none: {},
 };
 
 const AUTH_DEPS = {
-  jwt: { '@fastify/jwt': '^9.0.0' },              // v9 → Fastify v5
-  session: { '@fastify/session': '^11.0.0' },     // v11 → Fastify v5 (v10 was v4-only)
+  jwt: { '@fastify/jwt': '^9.0.0' }, // v9 → Fastify v5
+  // @fastify/session requires a cookie plugin registered before it.
+  session: { '@fastify/session': '^11.0.0', '@fastify/cookie': '^11.0.0' },
   apikey: {},
   none: {},
 };
 
 const PLUGIN_DEPS = {
-  cors: { '@fastify/cors': '^10.0.0' },                                           // v10 → Fastify v5
-  ratelimit: { '@fastify/rate-limit': '^10.0.0' },                               // v10 → Fastify v5
-  swagger: { '@fastify/swagger': '^9.0.0', '@fastify/swagger-ui': '^5.0.0' },   // v9/v5 → Fastify v5
-  env: { '@fastify/env': '^5.0.0' },                                             // v5 → Fastify v5
+  cors: { '@fastify/cors': '^10.0.0' }, // v10 → Fastify v5
+  ratelimit: { '@fastify/rate-limit': '^10.0.0' }, // v10 → Fastify v5
+  swagger: { '@fastify/swagger': '^9.0.0', '@fastify/swagger-ui': '^5.0.0' }, // v9/v5 → Fastify v5
+  env: { '@fastify/env': '^5.0.0' }, // v5 → Fastify v5
+  helmet: { '@fastify/helmet': '^12.0.0' }, // v12 → Fastify v5
 };
 
 async function createBoilerplate(projectDir, projectName, choices, spinner) {
   spinner.text = `Creating Fastify project in ${projectDir}...`;
 
   await fs.copy(BASE_TEMPLATE_DIR, projectDir);
+  // npm strips files named `.env` / `.gitignore` from the published tarball,
+  // so they ship as `_env` / `_gitignore` and are renamed on copy.
+  await fs.move(path.join(projectDir, '_env'), path.join(projectDir, '.env'));
+  await fs.move(
+    path.join(projectDir, '_gitignore'),
+    path.join(projectDir, '.gitignore'),
+  );
   await fs.ensureDir(path.join(projectDir, 'src', 'plugins'));
 
   await fs.copy(
@@ -56,7 +66,11 @@ async function createBoilerplate(projectDir, projectName, choices, spinner) {
     );
   }
 
-  await fs.writeFile(path.join(projectDir, 'src', 'app.js'), generateAppJs(choices), 'utf-8');
+  await fs.writeFile(
+    path.join(projectDir, 'src', 'app.js'),
+    generateAppJs(choices),
+    'utf-8',
+  );
   await updatePackageJson(projectDir, projectName, choices);
   await appendEnvVars(projectDir, choices);
 
@@ -79,14 +93,19 @@ function generateAppJs(choices) {
   const imports = [
     "'use strict';",
     '',
+    '// Loaded here so tests that call buildApp() get .env too, not just the server.',
+    "require('dotenv').config({ quiet: true });",
+    '',
     "const aboutRoute = require('./routes/about');",
     "const healthRoute = require('./routes/health');",
     "const dbPlugin = require('./plugins/db');",
     "const authPlugin = require('./plugins/auth');",
+    "const errorHandler = require('./utils/errorHandler');",
   ];
 
   const optionalImports = {
     env: "const envPlugin = require('./plugins/env');",
+    helmet: "const helmetPlugin = require('./plugins/helmet');",
     swagger: "const swaggerPlugin = require('./plugins/swagger');",
     cors: "const corsPlugin = require('./plugins/cors');",
     ratelimit: "const rateLimitPlugin = require('./plugins/ratelimit');",
@@ -96,30 +115,38 @@ function generateAppJs(choices) {
     if (plugins.includes(key)) imports.push(line);
   }
 
-  const pluginRegistrations = ['    //Plugins registration'];
+  const pluginRegistrations = ['  //Plugins registration'];
 
-  if (plugins.includes('env')) pluginRegistrations.push('    fastify.register(envPlugin);');
-  if (plugins.includes('swagger')) pluginRegistrations.push('    fastify.register(swaggerPlugin);');
-  pluginRegistrations.push('    fastify.register(dbPlugin);');
-  pluginRegistrations.push('    fastify.register(authPlugin);');
-  if (plugins.includes('cors')) pluginRegistrations.push('    fastify.register(corsPlugin);');
-  if (plugins.includes('ratelimit')) pluginRegistrations.push('    fastify.register(rateLimitPlugin);');
+  if (plugins.includes('env'))
+    pluginRegistrations.push('  fastify.register(envPlugin);');
+  if (plugins.includes('helmet'))
+    pluginRegistrations.push('  fastify.register(helmetPlugin);');
+  if (plugins.includes('swagger'))
+    pluginRegistrations.push('  fastify.register(swaggerPlugin);');
+  pluginRegistrations.push('  fastify.register(dbPlugin);');
+  pluginRegistrations.push('  fastify.register(authPlugin);');
+  if (plugins.includes('cors'))
+    pluginRegistrations.push('  fastify.register(corsPlugin);');
+  if (plugins.includes('ratelimit'))
+    pluginRegistrations.push('  fastify.register(rateLimitPlugin);');
 
   const routeRegistrations = [
-    '    //Routes registration',
-    "    fastify.register(aboutRoute, { prefix: '/about' });",
-    "    fastify.register(healthRoute, { prefix: '/health' });",
+    '  //Routes registration',
+    "  fastify.register(aboutRoute, { prefix: '/about' });",
+    "  fastify.register(healthRoute, { prefix: '/health' });",
   ];
 
   const body = [
     'function buildApp(opts = {}) {',
-    "    const fastify = require('fastify')({ logger: true, ...opts });",
+    "  const fastify = require('fastify')({ logger: true, ...opts });",
     '',
     ...pluginRegistrations,
     '',
     ...routeRegistrations,
     '',
-    '    return fastify;',
+    '  fastify.setErrorHandler(errorHandler);',
+    '',
+    '  return fastify;',
     '}',
     '',
     'module.exports = buildApp;',
@@ -157,10 +184,21 @@ async function appendEnvVars(projectDir, choices) {
   const envPath = path.join(projectDir, '.env');
   const extras = [];
 
-  if (choices.auth === 'jwt') extras.push('JWT_SECRET=your-secret-here');
-  if (choices.auth === 'session') extras.push('SESSION_SECRET=changeme-use-at-least-32-characters');
-  if (choices.auth === 'apikey') extras.push('API_KEY=your-api-key-here');
-  if (choices.plugins.includes('cors')) extras.push('CORS_ORIGIN=*');
+  // Generated rather than placeholder: the auth plugins refuse to start without
+  // a real value, and a shipped placeholder is a public secret.
+  const secret = () => crypto.randomBytes(32).toString('hex');
+
+  if (choices.auth === 'jwt') extras.push(`JWT_SECRET=${secret()}`);
+  if (choices.auth === 'session') extras.push(`SESSION_SECRET=${secret()}`);
+  if (choices.auth === 'apikey') extras.push(`API_KEY=${secret()}`);
+  if (choices.plugins.includes('cors')) {
+    // A wildcard origin is incompatible with cookie-based auth.
+    extras.push(
+      choices.auth === 'session'
+        ? 'CORS_ORIGIN=http://localhost:3000'
+        : 'CORS_ORIGIN=*',
+    );
+  }
   if (choices.plugins.includes('ratelimit')) {
     extras.push('RATE_LIMIT_MAX=100');
     extras.push('RATE_LIMIT_WINDOW=1 minute');
@@ -170,7 +208,11 @@ async function appendEnvVars(projectDir, choices) {
   if (extras.length === 0) return;
 
   const current = await fs.readFile(envPath, 'utf-8');
-  await fs.writeFile(envPath, current.trimEnd() + '\n\n' + extras.join('\n') + '\n', 'utf-8');
+  await fs.writeFile(
+    envPath,
+    current.trimEnd() + '\n\n' + extras.join('\n') + '\n',
+    'utf-8',
+  );
 }
 
 async function setupTesting(projectDir, spinner) {
@@ -182,7 +224,9 @@ async function setupTesting(projectDir, spinner) {
     coverageProvider: 'v8',
   };
 
-  await fs.writeJson(path.join(projectDir, 'jest.config.json'), jestConfig, { spaces: 2 });
+  await fs.writeJson(path.join(projectDir, 'jest.config.json'), jestConfig, {
+    spaces: 2,
+  });
 
   const testDir = path.join(projectDir, 'tests', 'routes');
   await fs.ensureDir(testDir);
@@ -220,6 +264,7 @@ async function setupLinting(projectDir, spinner) {
   const eslintConfigContent = `'use strict';
 
 const js = require('@eslint/js');
+const globals = require('globals');
 const eslintPluginPrettierRecommended = require('eslint-plugin-prettier/recommended');
 
 module.exports = [
@@ -227,8 +272,15 @@ module.exports = [
   eslintPluginPrettierRecommended,
   {
     languageOptions: {
-      ecmaVersion: 2021,
+      ecmaVersion: 2022,
       sourceType: 'commonjs',
+      globals: globals.node,
+    },
+  },
+  {
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      globals: globals.jest,
     },
   },
 ];
@@ -236,33 +288,40 @@ module.exports = [
 
   const prettierConfig = { semi: true, singleQuote: true, printWidth: 80 };
 
-  await fs.writeFile(path.join(projectDir, 'eslint.config.js'), eslintConfigContent, 'utf-8');
-  await fs.writeJson(path.join(projectDir, '.prettierrc.json'), prettierConfig, { spaces: 2 });
+  await fs.writeFile(
+    path.join(projectDir, 'eslint.config.js'),
+    eslintConfigContent,
+    'utf-8',
+  );
+  await fs.writeJson(
+    path.join(projectDir, '.prettierrc.json'),
+    prettierConfig,
+    { spaces: 2 },
+  );
 
   spinner.succeed('Linter and prettier are ready');
 }
 
 async function createDockerfile(projectDir, spinner) {
-  const dockerfileContent = `# Use the official Node.js image as the base image
-FROM node:20
+  const dockerfileContent = `FROM node:22-alpine
 
-# Set the working directory in the container
+ENV NODE_ENV=production
+
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
+# Install production dependencies from the lockfile only
 COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the application code to the working directory
 COPY . .
 
-# Expose the port Fastify will use
+# Run as the unprivileged user that ships with the image
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 3000
 
-# Command to run the Fastify server
-CMD ["npm", "start"]
+CMD ["node", "src/index.js"]
 `;
 
   const dockerignoreContent = `node_modules
@@ -273,8 +332,16 @@ coverage
 `;
 
   await Promise.all([
-    fs.writeFile(path.join(projectDir, 'Dockerfile'), dockerfileContent, 'utf-8'),
-    fs.writeFile(path.join(projectDir, '.dockerignore'), dockerignoreContent, 'utf-8'),
+    fs.writeFile(
+      path.join(projectDir, 'Dockerfile'),
+      dockerfileContent,
+      'utf-8',
+    ),
+    fs.writeFile(
+      path.join(projectDir, '.dockerignore'),
+      dockerignoreContent,
+      'utf-8',
+    ),
   ]);
 
   spinner.succeed('Dockerfile and .dockerignore created successfully');

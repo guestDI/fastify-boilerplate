@@ -4,7 +4,7 @@ A CLI to scaffold production-ready [Fastify](https://fastify.dev) projects with 
 
 ## Requirements
 
-- Node.js 18 or higher
+- Node.js 20 or higher
 - npm 8 or higher
 
 ## Installation
@@ -21,18 +21,20 @@ npm install -g fastify-boilerplate-cli
 fastify-boilerplate-cli create <project-name>
 ```
 
-Creates a new directory named `<project-name>` and generates the full project structure inside it. During setup, the CLI will ask whether to include a **Dockerfile** and `.dockerignore`.
+Creates a new directory named `<project-name>` and generates the full project structure inside it. Project names may contain letters, digits, `.`, `-` and `_`.
+
+During setup the CLI asks for a database (PostgreSQL, MySQL, MongoDB, SQLite, none), an auth strategy (JWT, session, API key, none), optional plugins (**Helmet** security headers, CORS, rate limiting, Swagger, env validation), and whether to add a **Dockerfile**. Only the dependencies you pick are added to `package.json`.
 
 **What gets generated:**
 
 - Complete Fastify project structure (routes, controllers, services, models, plugins, utils)
-- `package.json` pre-configured with project name and all scripts
+- `package.json` pre-configured with project name, scripts, and the deps for your choices
 - Jest configuration and an example test using `app.inject()`
 - ESLint v9 flat config + Prettier
-- `.env` file with environment variable stubs
+- `.env` with your settings — auth secrets are **generated**, not placeholders
 - `.gitignore` covering `node_modules`, `.env`, `coverage`, `dist`, logs, and OS files
 - Git repository initialized automatically
-- Optional `Dockerfile` + `.dockerignore` (Node.js 20)
+- Optional `Dockerfile` + `.dockerignore` (Node.js 22 Alpine, non-root, `npm ci --omit=dev`)
 
 **Generated project structure:**
 
@@ -90,7 +92,7 @@ Run this inside an existing project created by this CLI:
 fastify-boilerplate-cli route <route-name>
 ```
 
-Generates a complete MVC slice for the given route name and automatically registers it in `src/app.js`.
+Generates a complete MVC slice for the given route name and automatically registers it in `src/app.js`. The route name becomes a JavaScript identifier in the generated files, so it must start with a letter and contain only letters, digits and underscores.
 
 **Files created:**
 

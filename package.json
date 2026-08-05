@@ -2,9 +2,19 @@
   "name": "fastify-boilerplate-cli",
   "version": "2.0.0",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "src",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "vitest",
-    "build": "node --check index.js src/commands/create.js src/commands/route.js src/generators/boilerplate.js src/generators/route.js src/utils/git.js src/prompts/createPrompts.js"
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "build": "find index.js src templates -name '*.js' -print0 | xargs -0 -n1 node --check"
   },
   "bin": {
     "fastify-boilerplate-cli": "./index.js"
@@ -17,10 +27,16 @@
   "dependencies": {
     "commander": "^12.1.0",
     "fs-extra": "^11.2.0",
-    "inquirer": "^12.1.0",
+    "inquirer": "^14.0.2",
     "ora": "^5.4.1"
   },
   "devDependencies": {
-    "vitest": "^2.0.0"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "globals": "^17.9.0",
+    "prettier": "^3.9.6",
+    "vitest": "^4.1.10"
   }
 }

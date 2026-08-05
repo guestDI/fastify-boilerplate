@@ -6,70 +6,56 @@ on:
       - main
     tags:
       - 'v*'
-  release:
-    types: [created]
   pull_request:
     branches:
       - main
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  release-please:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Release Please
-        uses: google-github-actions/release-please-action@v4
-        with:
-          release-type: node
-          package-name: fastify-boilerplate-cli
-          bump-minor-pre-major: true
-          changelog-types: release
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  enable-auto-merge:
-    needs: release-please
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
-    steps:
-    - name: Enable Auto-Merge for GitHub Actions Bot PR
-      env:
-        GH_PAT: ${{ secrets.GH_PAT }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-        PR_URL: ${{ github.event.pull_request.url }}
-      run: |
-        # Fetch the pull request details using the event-supplied PR number
-        pr_data=$(curl -s -H "Authorization: token $GH_PAT" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/${{ github.event.number }})
-
-        echo "Pull Request Data: $pr_data"  # Logs the PR data for debugging
-
-        pr_author=$(echo "$pr_data" | jq -r '.user.login')
-        if [ "$pr_author" = "github-actions[bot]" ]; then
-          # Enable auto-merge
-          response=$(curl -X PUT -H "Authorization: token $GH_PAT" \
-              -H "Accept: application/vnd.github.v3+json" \
-              https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/${{ github.event.number }}/merge \
-              -d '{"merge_method": "squash"}')
-          echo "Merge Response: $response"  # Logs the response from the merge request
-        else
-          echo "PR is not from GitHub Actions bot, skipping auto-merge."
-        fi
-
-  publish-npm:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test -- --run
+      - run: npm audit --omit=dev --audit-level=high
+
+  release-please:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          release-type: node
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-npm:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
           registry-url: https://registry.npmjs.org/
-      - run: npm install
-      - run: npm publish
+      - run: npm ci
+      - run: npm publish --access public --provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
